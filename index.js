@@ -25,6 +25,36 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
+    const serviceCollections = client.db("serviceDB").collection("services");
+    const bookingCollections = client.db("serviceDB").collection("bookings");
+
+    // services post
+    app.post("/services", async (req, res) => {
+      const newService = req.body;
+      const result = await serviceCollections.insertOne(newService);
+      res.send(result);
+    });
+
+    app.get("/services", async (req, res) => {
+      let queryObj = {};
+      let sortObj = {};
+      const category = req.query.serviceName;
+      const sortOrder = req.query.sortOrder;
+      const sortField = req.query.sortField;
+      console.log(queryObj);
+      if (category) {
+        queryObj.serviceName = category;
+      }
+
+      if (sortObj && sortOrder) {
+        sortObj[sortField] = sortOrder;
+      }
+
+      const cursor = serviceCollections.find(queryObj).sort(sortObj);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(

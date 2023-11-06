@@ -39,7 +39,6 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await serviceCollections.findOne(query);
-      console.log(result);
       res.send(result);
     });
 
@@ -59,6 +58,20 @@ async function run() {
 
       const cursor = serviceCollections.find(queryObj).sort(sortObj);
       const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.delete("/services/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await serviceCollections.deleteOne(query);
+      res.send(result);
+    });
+
+    // booking area
+    app.post("/bookings", async (req, res) => {
+      const newBooking = req.body;
+      const result = await bookingCollections.insertOne(newBooking);
       res.send(result);
     });
 

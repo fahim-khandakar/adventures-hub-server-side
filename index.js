@@ -1,5 +1,7 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const app = express();
@@ -7,7 +9,14 @@ const port = process.env.PORT || 5000;
 
 // middleware
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
+    credentials: true,
+  })
+);
+
+app.use(cookieParser());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.p0m1q4c.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -20,6 +29,31 @@ const client = new MongoClient(uri, {
   },
 });
 
+// middlewares
+const logger = async (req, res, next) => {
+  console.log("called:", req.host, req.originalUrl);
+  next();
+};
+
+const verifyToken = async (req, res, next) => {
+  const token = req.cookies?.token;
+  console.log("value of token:", token);
+  if (!token) {
+    return res.status(401).send({ message: "Not Authorized" });
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    //error
+    if (err) {
+      console.log(err);
+      return res.status(401).send({ message: "Unauthorized" });
+    }
+    console.log("value of token:", decoded);
+
+    req.user = decoded;
+    next();
+  });
+};
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -28,6 +62,21 @@ async function run() {
     const serviceCollections = client.db("serviceDB").collection("services");
     const bookingCollections = client.db("serviceDB").collection("bookings");
 
+    // auth related api
+    app.post("/jwt", logger, async (req, res) => {
+      const user = req.body;
+      console.log(user);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: false,
+        })
+        .send({ success: true });
+    });
+
     // services post
     app.post("/services", async (req, res) => {
       const newService = req.body;
@@ -35,14 +84,24 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/serviceDetails/:id", async (req, res) => {
+    app.get("/relatedService", logger, verifyToken, async (req, res) => {
+      const queryObj = {};
+      const query = req.query.serviceName;
+      if (query) {
+        queryObj.serviceName = query;
+      }
+      const result = await serviceCollections.find(queryObj).toArray();
+      res.send(result);
+    });
+
+    app.get("/serviceDetails/:id", logger, verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await serviceCollections.findOne(query);
       res.send(result);
     });
 
-    app.put("/updateService/:id", async (req, res) => {
+    app.put("/updateService/:id", logger, verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -84,14 +143,14 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/services/:id", async (req, res) => {
+    app.delete("/services/:id", logger, verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await serviceCollections.deleteOne(query);
       res.send(result);
     });
 
-    app.get("/myServices", async (req, res) => {
+    app.get("/myServices", logger, verifyToken, async (req, res) => {
       const queryObj = {};
       const myServices = req.query.email;
       if (myServices) {
@@ -102,13 +161,13 @@ async function run() {
     });
 
     // booking area
-    app.post("/bookings", async (req, res) => {
+    app.post("/bookings", logger, verifyToken, async (req, res) => {
       const newBooking = req.body;
       const result = await bookingCollections.insertOne(newBooking);
       res.send(result);
     });
 
-    app.put("/bookings/:id", async (req, res) => {
+    app.put("/bookings/:id", logger, verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
 
@@ -117,10 +176,6 @@ async function run() {
       const service = {
         $set: {
           status: updateBooking.status,
-          // serviceTakingDate: updateBooking.serviceTakingDate,
-          // servicePhoto: updateBooking.servicePhoto,
-          // serviceName: updateBooking.serviceName,
-          // price: updateBooking.price,
         },
       };
       const result = await bookingCollections.updateOne(
@@ -132,7 +187,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/myBookings", async (req, res) => {
+    app.get("/myBookings", logger, verifyToken, async (req, res) => {
       const queryObj = {};
       const myBookings = req.query.email;
       if (myBookings) {
@@ -142,7 +197,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/myPending", async (req, res) => {
+    app.get("/myPending", logger, verifyToken, async (req, res) => {
       const queryEmail = req.query.email;
       const allPending = await bookingCollections
         .find({ clientEmail: { $ne: queryEmail } })

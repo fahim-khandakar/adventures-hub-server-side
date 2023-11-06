@@ -108,6 +108,64 @@ async function run() {
       res.send(result);
     });
 
+    app.put("/bookings/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+
+      const options = { upsert: true };
+      const updateBooking = req.body;
+      const service = {
+        $set: {
+          status: updateBooking.status,
+          // serviceTakingDate: updateBooking.serviceTakingDate,
+          // servicePhoto: updateBooking.servicePhoto,
+          // serviceName: updateBooking.serviceName,
+          // price: updateBooking.price,
+        },
+      };
+      const result = await bookingCollections.updateOne(
+        query,
+        service,
+        options
+      );
+      console.log(id, updateBooking);
+      res.send(result);
+    });
+
+    app.get("/myBookings", async (req, res) => {
+      const queryObj = {};
+      const myBookings = req.query.email;
+      if (myBookings) {
+        queryObj.clientEmail = myBookings;
+      }
+      const result = await bookingCollections.find(queryObj).toArray();
+      res.send(result);
+    });
+
+    app.get("/myPending", async (req, res) => {
+      const queryEmail = req.query.email;
+      const allPending = await bookingCollections
+        .find({ clientEmail: { $ne: queryEmail } })
+        .toArray();
+
+      res.send(allPending);
+    });
+
+    // app.get("/myPending", async (req, res) => {
+    //   const queryObj = req.query.email;
+    //   const allPending = await bookingCollections.find().toArray();
+    //   const arr = [];
+
+    //   if (allPending.length > 0) {
+    //     const result = allPending.filter(
+    //       (item) => item.clientEmail !== queryObj
+    //     );
+    //     arr.push(...result); // Push the filtered data into the arr array
+    //   }
+
+    //   res.send(arr);
+    // });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(

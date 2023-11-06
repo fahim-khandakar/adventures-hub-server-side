@@ -42,6 +42,29 @@ async function run() {
       res.send(result);
     });
 
+    app.put("/updateService/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updateService = req.body;
+      const service = {
+        $set: {
+          servicePhoto: updateService.servicePhoto,
+          serviceName: updateService.serviceName,
+          price: updateService.price,
+          serviceArea: updateService.serviceArea,
+          description: updateService.description,
+        },
+      };
+      const result = await serviceCollections.updateOne(
+        query,
+        service,
+        options
+      );
+      res.send(result);
+      console.log(id);
+    });
+
     app.get("/services", async (req, res) => {
       let queryObj = {};
       let sortObj = {};
@@ -65,6 +88,16 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await serviceCollections.deleteOne(query);
+      res.send(result);
+    });
+
+    app.get("/myServices", async (req, res) => {
+      const queryObj = {};
+      const myServices = req.query.email;
+      if (myServices) {
+        queryObj.email = myServices;
+      }
+      const result = await serviceCollections.find(queryObj).toArray();
       res.send(result);
     });
 

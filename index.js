@@ -77,6 +77,10 @@ async function run() {
         .send({ success: true });
     });
 
+    app.post("/logout", async (req, res) => {
+      res.clearCookie("token", { maxAge: 0 }).send({ success: true });
+    });
+
     // services post
     app.post("/services", async (req, res) => {
       const newService = req.body;
@@ -101,7 +105,7 @@ async function run() {
       res.send(result);
     });
 
-    app.put("/updateService/:id", logger, verifyToken, async (req, res) => {
+    app.put("/updateService/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -143,7 +147,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/services/:id", logger, verifyToken, async (req, res) => {
+    app.delete("/services/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await serviceCollections.deleteOne(query);
@@ -161,13 +165,13 @@ async function run() {
     });
 
     // booking area
-    app.post("/bookings", logger, verifyToken, async (req, res) => {
+    app.post("/bookings", async (req, res) => {
       const newBooking = req.body;
       const result = await bookingCollections.insertOne(newBooking);
       res.send(result);
     });
 
-    app.put("/bookings/:id", logger, verifyToken, async (req, res) => {
+    app.put("/bookings/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
 

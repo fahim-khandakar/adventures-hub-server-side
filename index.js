@@ -204,7 +204,7 @@ async function run() {
     app.get("/myPending", logger, verifyToken, async (req, res) => {
       const queryEmail = req.query.email;
       const allPending = await bookingCollections
-        .find({ clientEmail: { $ne: queryEmail } })
+        .find({ clientEmail: { $ne: queryEmail }, email: queryEmail })
         .toArray();
 
       res.send(allPending);

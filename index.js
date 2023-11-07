@@ -11,11 +11,7 @@ const port = process.env.PORT || 5000;
 app.use(express.json());
 app.use(
   cors({
-    origin: [
-      // "http://localhost:5173"
-      "https://adventures-hub.web.app",
-      "https://adventures-hub.firebaseapp.com",
-    ],
+    origin: ["https://adventures-hub.web.app"], // http://localhost:5173
     credentials: true,
   })
 );
@@ -68,6 +64,10 @@ async function run() {
 
     // auth related api
     app.post("/jwt", logger, async (req, res) => {
+      res.setHeader(
+        "Access-Control-Allow-Origin",
+        "https://adventures-hub.web.app"
+      );
       const user = req.body;
       console.log(user);
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
@@ -75,14 +75,20 @@ async function run() {
       });
       res
         .cookie("token", token, {
-          httpOnly: true,
-          secure: false,
+          secure: process.env.NODE_ENV === "production" ? true : false,
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         })
         .send({ success: true });
     });
 
     app.post("/logout", async (req, res) => {
-      res.clearCookie("token", { maxAge: 0 }).send({ success: true });
+      res
+        .clearCookie("token", {
+          maxAge: 0,
+          secure: process.env.NODE_ENV === "production" ? true : false,
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ success: true });
     });
 
     // services post

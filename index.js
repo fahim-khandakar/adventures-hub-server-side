@@ -75,6 +75,7 @@ async function run() {
       });
       res
         .cookie("token", token, {
+          httpOnly: true,
           secure: process.env.NODE_ENV === "production" ? true : false,
           sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         })
@@ -135,7 +136,6 @@ async function run() {
         options
       );
       res.send(result);
-      console.log(id);
     });
 
     app.get("/services", async (req, res) => {
@@ -167,6 +167,7 @@ async function run() {
     app.get("/myServices", logger, verifyToken, async (req, res) => {
       const queryObj = {};
       const myServices = req.query.email;
+      console.log("myService", myServices);
       if (myServices) {
         queryObj.email = myServices;
       }
